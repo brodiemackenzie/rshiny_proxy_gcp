@@ -1,0 +1,15 @@
+{% set NETWORK_NAME = "rshiny-network" %}
+
+resources:
+- name: vm-ubuntu-rshiny-proxy
+  type: rshiny-proxy-vm.jinja
+  properties:
+    machineType: n1-standard-1
+    zone: europe-west1-b
+    network: {{ NETWORK_NAME }}
+- name: {{ NETWORK_NAME }}
+  type: rshiny-proxy-network.jinja
+- name: {{ NETWORK_NAME }}-firewall
+  type: rshiny-proxy-fw.jinja
+  properties:
+    network: {{ NETWORK_NAME }}
