@@ -1,0 +1,92 @@
+{% set NETWORK_NAME = "rshiny-network" %}
+{% set IKE_VERSION = "2" %}
+{% set SHARED_SECRET = "rshiny-proxy" %}
+
+resources:
+# Create RShiny Proxy & Shiny App VM
+- name: vm-ubuntu-rshiny-proxy
+  type: rshiny-proxy-vm.jinja
+  properties:
+    machineType: n1-standard-1
+    zone: europe-west1-b
+    network: {{ NETWORK_NAME }}
+
+# Create client VM to access RShiny Proxy VM
+- name: vm-ubuntu-client
+  type: rshiny-proxy-vm-2.jinja
+  properties:
+    machineType: n1-standard-1
+    zone: europe-west1-b
+    network: {{ NETWORK_NAME }}-2
+- name: {{ NETWORK_NAME }}
+  type: rshiny-proxy-network.jinja
+- name: {{ NETWORK_NAME }}-2
+  type: rshiny-proxy-network-2.jinja
+
+# Create firewall rules
+- name: {{ NETWORK_NAME }}-firewall
+  type: rshiny-proxy-fw.jinja
+  properties:
+    network: {{ NETWORK_NAME }}
+- name: {{ NETWORK_NAME }}-2-firewall
+  type: rshiny-proxy-fw-2.jinja 
+  properties:
+    network: {{ NETWORK_NAME }}-2
+
+# Create VPN Gateways
+- name: {{ NETWORK_NAME }}-vpn-gw
+  type: rshiny-proxy-vpn-gw.jinja
+  properties:
+    region: europe-west1
+    network: {{ NETWORK_NAME }}
+- name: {{ NETWORK_NAME }}-vpn-gw-2
+  type: rshiny-proxy-vpn-gw-2.jinja
+  properties:
+    region: europe-west1
+    network: {{ NETWORK_NAME }}-2
+
+# Create VPN tunnels
+- name: {{ NETWORK_NAME }}-1to2-tunnel
+  type: compute.v1.vpnTunnel
+  properties:
+    region: europe-west1
+    ikeVersion: {{ IKE_VERSION }}
+    peerIp: $(ref.{{ NETWORK_NAME }}-vpn-gw-2.vpn-gw-ip-2)
+    sharedSecret: {{ SHARED_SECRET }}
+    targetVpnGateway: $(ref.{{ NETWORK_NAME }}-vpn-gw.vpn-gw-1-url)
+    localTrafficSelector: ["0.0.0.0/0"]
+    remoteTrafficSelector: ["0.0.0.0/0"]
+  metadata:
+    dependsOn:
+      - {{ NETWORK_NAME }}-vpn-gw-esp-rule
+      - {{ NETWORK_NAME }}-vpn-gw-udp-500-rule
+      - {{ NETWORK_NAME }}-vpn-gw-udp-4500-rule
+- name: {{ NETWORK_NAME }}-2to1-tunnel
+  type: compute.v1.vpnTunnel
+  properties:
+    region: europe-west1
+    ikeVersion: {{ IKE_VERSION }}
+    peerIp: $(ref.{{ NETWORK_NAME }}-vpn-gw.vpn-gw-ip)
+    sharedSecret: {{ SHARED_SECRET }}
+    targetVpnGateway: $(ref.{{ NETWORK_NAME }}-vpn-gw-2.vpn-gw-2-url)
+    localTrafficSelector: ["0.0.0.0/0"]
+    remoteTrafficSelector: ["0.0.0.0/0"]
+  metadata:
+    dependsOn:
+      - {{ NETWORK_NAME }}-vpn-gw-2-esp-rule
+      - {{ NETWORK_NAME }}-vpn-gw-2-udp-500-rule
+      - {{ NETWORK_NAME }}-vpn-gw-2-udp-4500-rule
+
+# Create static routes to route traffic through VPN tunnels 
+- name: {{ NETWORK_NAME }}-1to2-route
+  type: compute.v1.route
+  properties:
+    network: $(ref.{{ NETWORK_NAME }}.selfLink)
+    nextHopVpnTunnel: $(ref.{{ NETWORK_NAME }}-1to2-tunnel.selfLink)
+    destRange: $(ref.{{ NETWORK_NAME }}-2.IPv4Range)
+- name: {{ NETWORK_NAME }}-2to1-route
+  type: compute.v1.route
+  properties:
+    network: $(ref.{{ NETWORK_NAME }}-2.selfLink)
+    nextHopVpnTunnel: $(ref.{{ NETWORK_NAME }}-2to1-tunnel.selfLink)
+    destRange: $(ref.{{ NETWORK_NAME }}.IPv4Range)

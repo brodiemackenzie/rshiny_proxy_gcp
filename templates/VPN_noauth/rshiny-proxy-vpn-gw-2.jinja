@@ -1,0 +1,43 @@
+resources:
+- name: {{ env["name"] }}
+  type: compute.v1.targetVpnGateway
+  properties:
+    region: {{ properties["region"] }}
+    network: $(ref.{{ properties["network"] }}.selfLink)
+- name: {{ env["name"] }}-ip-2
+  type: compute.v1.address
+  properties:
+    region: {{ properties["region"] }}
+- name: {{ env["name"] }}-esp-rule
+  type: compute.v1.forwardingRule
+  properties:
+    IPAddress: $(ref.{{ env["name"] }}-ip-2.address)
+    IPProtocol: ESP
+    region: {{ properties["region"] }}
+    target: $(ref.{{ env["name"] }}.selfLink)
+- name: {{ env["name"] }}-udp-4500-rule
+  type: compute.v1.forwardingRule
+  properties:
+    IPAddress: $(ref.{{ env["name"] }}-ip-2.address)
+    IPProtocol: UDP
+    portRange: 4500
+    region: {{ properties["region"] }}
+    target: $(ref.{{ env["name"] }}.selfLink)
+- name: {{ env["name"] }}-udp-500-rule
+  type: compute.v1.forwardingRule
+  properties:
+    IPAddress: $(ref.{{ env["name"] }}-ip-2.address)
+    IPProtocol: UDP
+    portRange: 500
+    region: {{ properties["region"] }}
+    target: $(ref.{{ env["name"] }}.selfLink)
+outputs:
+- name: vpn-gw-ip-2
+  value: $(ref.{{ env["name"] }}-ip-2.address) 
+- name: vpn-gw-2-url
+  value: $(ref.{{ env["name"] }}.selfLink)
+#  metadata:
+#    dependsOn:
+#    - {{ env["name"] }}-esp-rule
+#    - {{ env["name"] }}-udp-500-rule
+#    - {{ env["name"] }}-udp-4500-rule

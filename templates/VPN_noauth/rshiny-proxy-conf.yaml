@@ -1,0 +1,15 @@
+imports:
+- path: rshiny-proxy-vm.jinja
+- path: rshiny-proxy-vm-2.jinja
+- path: rshiny-proxy-network.jinja
+- path: rshiny-proxy-network-2.jinja
+- path: rshiny-proxy-fw.jinja
+- path: rshiny-proxy-fw-2.jinja
+- path: rshiny-proxy-vpn-gw.jinja
+- path: rshiny-proxy-vpn-gw-2.jinja
+- path: rshiny-proxy-gce.jinja
+- path: startup-master.sh
+
+resources:
+- name: rshiny-proxy-gce
+  type: rshiny-proxy-gce.jinja

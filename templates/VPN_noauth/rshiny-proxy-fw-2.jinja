@@ -1,0 +1,10 @@
+resources:
+- name: {{ env["name"] }}
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.{{ properties["network"] }}.selfLink)
+    sourceRanges: ["10.5.4.0/24"]
+    allowed:
+    - IPProtocol: TCP
+      ports: ["8080", "22"]
+    - IPProtocol: ICMP
